@@ -1,69 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Success Rate Counter</title>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Success Rate Counter</title>
 
 <style>
 * {
-    box-sizing: border-box;
-    font-size: 2vmax
+	box-sizing: border-box;
+	font-size: 2vmax
 }
 html {
-    height: 100%;
-    padding: 1em;
+	height: 100%;
+	padding: 1em;
 }
-body {       
-    height: 100%;
-    margin: 0;
+body {	   
+	height: 100%;
+	margin: 0;
 }
 #mainGrid {
-    display: grid;
-    gap: 1em;
-    grid-template: 1fr 2em 2em / 1fr 1fr;
-    height: 100%;
+	display: grid;
+	gap: 1em;
+	grid-template: 1fr 2em 2em / 1fr 1fr;
+	height: 100%;
 }
 
-#successRateCont {
-    grid-column: 1/-1;
-}
 #successRateOut {
-    display: inline;
+	display: inline;
+}
+
+.copy-button {
+	transition: background-color .2s;
+}
+.copy-button.copying {
+	background-color: #888;
+}
+.copy-button.copied {
+	background-color: #eee;
 }
 </style>
 </head>
 <body>
-    <div id="mainGrid">
-        <button id="successBtn">Success</button>
-        <button id="failBtn">Fail</button>
+	<div id="mainGrid">
+		<button id="successBtn">Success</button>
+		<button id="failBtn">Fail</button>
 
-        <input type="number" id="successCount" value="0" min="0"/>
-        <input type="number" id="failCount" value="0" min="0"/>
+		<input type="number" id="successCount" value="0" min="0"/>
+		<input type="number" id="failCount" value="0" min="0"/>
 
-        <div id="successRateCont">
-            Success Rate: <pre id="successRateOut">  0.0%</pre>
-        </div>
-    </div>
+		<div id="successRateCont" class="copy-button">
+			Success Rate: <pre id="successRateOut">  0.0%</pre>
+		</div>
+
+		<button id="copyHistoryBtn" disabled>Copy History</button>
+	</div>
 
 <script>
-function updateSuccessRate() {
-    const sCount = Math.max(0, successCount.value);
-    successCount.value = sCount;
-    const fCount = Math.max(0, failCount.value);
-    failCount.value = fCount;
-    const sRate = 100 * sCount / (sCount + fCount) || 0;
+const history = [];
 
-    successRateOut.innerText = sRate.toFixed(1).padStart(5) + "%";
+let startTime;
+function updateSuccessRate() {
+	const sCount = Math.max(0, successCount.value);
+	successCount.value = sCount;
+	const fCount = Math.max(0, failCount.value);
+	failCount.value = fCount;
+	const sRate = 100 * sCount / (sCount + fCount) || 0;
+
+	successRateOut.innerText = sRate.toFixed(1).padStart(5) + "%";
+	
+	startTime ??= Date.now();
+	history.push({
+		attempt: sCount + fCount,
+		ms_elapsed: Date.now() - startTime,
+		successes: sCount,
+		failures: fCount,
+		successRate: sRate,
+	});
+	copyHistoryBtn.removeAttribute("disabled");
 }
 function addSuccess() {
-    ++successCount.value;
-    updateSuccessRate();
+	++successCount.value;
+	updateSuccessRate();
 }
 function addFail() {
-    ++failCount.value;
-    updateSuccessRate();
+	++failCount.value;
+	updateSuccessRate();
 }
 successBtn.addEventListener("click", addSuccess);
 failBtn.addEventListener("click", addFail);
@@ -71,10 +93,37 @@ failBtn.addEventListener("click", addFail);
 mainGrid.addEventListener("input", updateSuccessRate);
 
 document.documentElement.addEventListener("keydown", e=>{
-    ({
-        s: addSuccess,
-        f: addFail,
-    })[e.key.toLowerCase()]?.();
+	({
+		s: addSuccess,
+		f: addFail,
+	})[e.key.toLowerCase()]?.();
+});
+
+function soaToTsv(objs) {
+	const keys = Object.keys(objs[0]);
+	const rows = [keys.join('\t')];
+	for (const obj of objs) {
+		const cells = [];
+		for (const key of keys) cells.push(obj[key]);
+		rows.push(cells.join('\t'));
+	}
+	return rows.join('\n');
+}
+
+let copiedTimer = -1;
+const origText = copyHistoryBtn.innerText;
+copyHistoryBtn.addEventListener("click", async ()=>{
+	copyHistoryBtn.innerText = "Copying...";
+	copyHistoryBtn.classList.add("copying");
+	await navigator.clipboard.writeText(soaToTsv(history));
+	copyHistoryBtn.innerText = "Copied!";
+	copyHistoryBtn.classList.replace("copying", "copied");
+
+	clearTimeout(copiedTimer);
+	copiedTimer = setTimeout(()=>{
+		copyHistoryBtn.innerText = origText;
+		copyHistoryBtn.classList.remove("copied");
+	}, 5000);
 });
 </script>
 
