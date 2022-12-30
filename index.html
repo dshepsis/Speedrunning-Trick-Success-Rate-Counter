@@ -29,16 +29,6 @@ body {
 #successRateOut {
 	display: inline;
 }
-
-.copy-button {
-	transition: background-color .2s;
-}
-.copy-button.copying {
-	background-color: #888;
-}
-.copy-button.copied {
-	background-color: #eee;
-}
 </style>
 </head>
 <body>
@@ -49,11 +39,11 @@ body {
 		<input type="number" id="successCount" value="0" min="0"/>
 		<input type="number" id="failCount" value="0" min="0"/>
 
-		<div id="successRateCont" class="copy-button">
+		<div id="successRateCont">
 			Success Rate: <pre id="successRateOut">  0.0%</pre>
 		</div>
 
-		<button id="copyHistoryBtn" disabled>Copy History</button>
+		<button id="copyHistoryBtn" class="copy-button" disabled>Copy History</button>
 	</div>
 
 <script>
